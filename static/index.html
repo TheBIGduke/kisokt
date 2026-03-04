@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>System Hub</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: sans-serif;
+            background: #121212;
+            color: white;
+        }
+
+        /* Main Hub Menu */
+        #hub-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .app-btn {
+            padding: 20px 40px;
+            font-size: 24px;
+            cursor: pointer;
+            background: #2a2a2a;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 8px;
+            width: 400px;
+            transition: 0.2s;
+        }
+
+        .app-btn:hover {
+            background: #3a3a3a;
+            border-color: #666;
+        }
+
+        /* Iframe & Headless States */
+        #app-frame {
+            display: none;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+
+        #headless-screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            color: #0f0;
+            padding: 50px;
+            box-sizing: border-box;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Return Button Overlay */
+        #return-btn {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            padding: 15px 30px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Password Modal */
+        #password-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal {
+            background: #222;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            width: 320px;
+            border: 1px solid #444;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        .modal input {
+            width: 80%;
+            padding: 12px;
+            margin: 20px 0;
+            font-size: 18px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background: #111;
+            color: white;
+            text-align: center;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            background: #444;
+            color: white;
+        }
+
+        .modal-buttons .primary {
+            background: #0d6efd;
+        }
+
+        .modal-buttons button:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="hub-menu">
+        <h1 style="margin-bottom: 40px;">System Applications</h1>
+    </div>
+
+    <iframe id="app-frame"></iframe>
+
+    <div id="headless-screen" style="display: none;">
+        <h2>Process Running</h2>
+        <p>This application is executing in the background.</p>
+    </div>
+
+    <button id="return-btn" onclick="requestReturn()">Return to Hub</button>
+
+    <div id="password-overlay">
+        <div class="modal">
+            <h3>Admin Override</h3>
+            <input type="password" id="kiosk-password" placeholder="Password...">
+            <div class="modal-buttons">
+                <button onclick="cancelReturn()">Cancel</button>
+                <button class="primary" onclick="confirmReturn()">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAppId = null;
+
+        window.onload = async () => {
+            try {
+                const response = await fetch("/api/apps");
+                const apps = await response.json();
+                const menu = document.getElementById('hub-menu');
+
+                for (const appId in apps) {
+                    const btn = document.createElement('button');
+                    btn.className = 'app-btn';
+                    btn.onclick = () => launchApp(appId);
+                    btn.textContent = `Launch ${apps[appId].name}`;
+                    menu.appendChild(btn);
+                }
+            } catch (error) {
+                console.error("Failed to load apps:", error);
+            }
+        };
+
+        async function launchApp(appId) {
+            const response = await fetch(`/api/start/${appId}`, { method: 'POST' });
+            const data = await response.json();
+            currentAppId = appId;
+
+            document.getElementById('hub-menu').style.display = 'none';
+            document.getElementById('return-btn').style.display = 'block';
+
+            if (data.app_info.type === 'web') {
+                // Give the Python/Node servers a brief moment to bind to their ports
+                setTimeout(() => {
+                    const frame = document.getElementById('app-frame');
+                    frame.src = `http://localhost:${data.app_info.port}`;
+                    frame.style.display = 'block';
+                }, 1200);
+            } else {
+                document.getElementById('headless-screen').style.display = 'flex';
+            }
+        }
+
+        function requestReturn() {
+            document.getElementById('password-overlay').style.display = 'flex';
+            const passInput = document.getElementById('kiosk-password');
+            passInput.value = '';
+            passInput.focus();
+        }
+
+        function cancelReturn() {
+            document.getElementById('password-overlay').style.display = 'none';
+        }
+
+        async function confirmReturn() {
+            const passwordInput = document.getElementById('kiosk-password').value;
+
+            if (passwordInput === "1234") { // Update this for production
+                await fetch(`/api/stop/${currentAppId}`, { method: 'POST' });
+
+                document.getElementById('password-overlay').style.display = 'none';
+                document.getElementById('app-frame').src = "";
+                document.getElementById('app-frame').style.display = 'none';
+                document.getElementById('headless-screen').style.display = 'none';
+                document.getElementById('return-btn').style.display = 'none';
+                document.getElementById('hub-menu').style.display = 'flex';
+
+                currentAppId = null;
+            } else {
+                alert("Access Denied: Incorrect password.");
+                document.getElementById('kiosk-password').value = '';
+            }
+        }
+    </script>
+</body>
+
+</html>
