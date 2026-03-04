@@ -20,7 +20,7 @@ def get_dynamic_apps():
             hash_val = int(hashlib.md5(item.encode()).hexdigest(), 16)
             port = 3000 + (hash_val % 5000)
             
-            apps[item] = {
+            app_config = {
                 "id": item,
                 "name": item.replace("_", " ").title(),
                 "type": "web",
@@ -30,6 +30,15 @@ def get_dynamic_apps():
                 "cwd": item_path,
                 "args": ["--", "-m", "http.server", str(port)]
             }
+
+            deploy_dir = os.path.join(item_path, "deploy")
+            if os.path.exists(deploy_dir) and os.path.isdir(deploy_dir):
+                sh_files = [f for f in os.listdir(deploy_dir) if f.endswith('.sh')]
+                if sh_files:
+                    app_config["script"] = os.path.join("deploy", sh_files[0])
+                    app_config["args"] = []
+
+            apps[item] = app_config
     return apps
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
