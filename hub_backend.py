@@ -60,10 +60,12 @@ async def start_app(app_id: str):
     app_data = apps[app_id]
 
     cmd = [
-        "pm2", "start", app_data["script"], 
-        "--name", app_data["pm2_name"], 
+        "pm2", "start", app_data["script"],
+        "--name", app_data["pm2_name"],
         "--cwd", app_data["cwd"]
     ]
+    if app_data["script"].endswith(".sh"):
+        cmd += ["--interpreter", "bash"]
     if app_data.get("args"):
         cmd.extend(app_data["args"])
         

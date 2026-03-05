@@ -187,7 +187,7 @@
                     const btn = document.createElement('button');
                     btn.className = 'app-btn';
                     btn.onclick = () => launchApp(appId);
-                    btn.textContent = `Launch ${apps[appId].name}`;
+                    btn.textContent = `${apps[appId].name}`;
                     menu.appendChild(btn);
                 }
             } catch (error) {
