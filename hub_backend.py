@@ -44,6 +44,11 @@ def get_dynamic_apps():
                     app_config["type"] = "url"
                     app_config["url"] = f.read().strip()
 
+            type_file = os.path.join(item_path, "type.txt")
+            if os.path.exists(type_file):
+                with open(type_file, "r") as f:
+                    app_config["type"] = f.read().strip()
+
             apps[item] = app_config
     return apps
 
