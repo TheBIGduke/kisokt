@@ -38,6 +38,12 @@ def get_dynamic_apps():
                     app_config["script"] = os.path.join("deploy", sh_files[0])
                     app_config["args"] = []
 
+            url_file = os.path.join(item_path, "url.txt")
+            if os.path.exists(url_file):
+                with open(url_file, "r") as f:
+                    app_config["type"] = "url"
+                    app_config["url"] = f.read().strip()
+
             apps[item] = app_config
     return apps
 
@@ -59,6 +65,9 @@ async def start_app(app_id: str):
 
     app_data = apps[app_id]
 
+    if app_data.get("type") == "url":
+        return {"status": "success", "app_info": app_data}
+
     cmd = [
         "pm2", "start", app_data["script"],
         "--name", app_data["pm2_name"],
@@ -79,7 +88,8 @@ async def stop_app(app_id: str):
         raise HTTPException(status_code=404, detail="App not found")
 
     app_data = apps[app_id]
-    subprocess.run(["pm2", "stop", app_data["pm2_name"]], check=True)
+    if app_data.get("type") != "url":
+        subprocess.run(["pm2", "stop", app_data["pm2_name"]], check=True)
     return {"status": "success"}
 
 if __name__ == "__main__":
