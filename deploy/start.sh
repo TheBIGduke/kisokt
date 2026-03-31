@@ -24,4 +24,5 @@ chromium-browser --kiosk \
     --window-position=$SCREEN_X,$SCREEN_Y \
     --no-first-run \
     --disable-features=TranslateUI \
+    --use-fake-ui-for-media-stream \
     --app="$APP_URL"
